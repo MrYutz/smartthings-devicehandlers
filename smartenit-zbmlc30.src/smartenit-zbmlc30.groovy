@@ -48,11 +48,15 @@ metadata {
 		capability "Sensor"
 		capability "Energy Meter"
 
-		command "onRelay2"
-        command "offRelay2"
+		command "relay2_on"
+        command "relay2_off"
         
+        command "relay1_on"
+        command "relay1_off" 
+       
 		// indicates that device keeps track of heartbeat (in state.heartbeat)
 		attribute "heartbeat", "string"
+        attribute "switch1", "ENUM",["on","off"]
 		attribute "switch2", "ENUM",["on","off"]
 
 		fingerprint profileId: "0104", inClusters: "0000,0003,0004,0005,0006,0702", outClusters: "0019", model: "ZBMLC30", deviceJoinName: "Smartenit Metering Dual Load Controller"
@@ -81,18 +85,18 @@ metadata {
 
 	// UI tile definitions
 	tiles(scale: 1) {
-        standardTile("switch", "device.switch", width: 1, height: 1, canChangeIcon: true) {
-            state "off", label: '${name}', action: "switch.on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
-            state "on", label: '${name}', action: "switch.off", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
-            state "turningOn", label: '${name}', action: "switch.off", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
-            state "turningOff", label: '${name}', action: "switch.on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
+        standardTile("switch1", "device.switch1", width: 1, height: 1, canChangeIcon: true) {
+            state "off", label: '${name}', action: "relay1_on", icon: "st.switches.switch.off", backgroundColor: "#ffc1c1", nextState: "turningOn"
+            state "on", label: '${name}', action: "relay1_off", icon: "st.switches.switch.on", backgroundColor: "#ff0000", nextState: "turningOff"
+            state "turningOn", label: '${name}', action: "relay1_off", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
+            state "turningOff", label: '${name}', action: "relay1_on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
         }
 
         standardTile("switch2", "device.switch2", width: 1, height: 1, canChangeIcon: true) {
-            state "off", label: '${name}', action: "onRelay2", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
-            state "on", label: '${name}', action: "offRelay2", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
-            state "turningOn", label: '${name}', action: "offRelay2", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
-            state "turningOff", label: '${name}', action: "onRelay2", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
+            state "off", label: '${name}', action: "relay2_on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
+            state "on", label: '${name}', action: "relay2_off", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
+            state "turningOn", label: '${name}', action: "relay2_off", icon: "st.switches.switch.on", backgroundColor: "#79b821", nextState: "turningOff"
+            state "turningOff", label: '${name}', action: "relay2_on", icon: "st.switches.switch.off", backgroundColor: "#ffffff", nextState: "turningOn"
         }
         
 		standardTile("refresh", "device.power", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
@@ -107,8 +111,8 @@ metadata {
             state "val", label:'0${currentValue} kWh', defaultState: true
         }
         
-		main (["switch", "switch2"])
-		details(["switch", "switch2","refresh","power","energy"])
+		main (["switch1", "switch2"])
+		details(["switch1", "switch2","refresh","power","energy"])
 	}
 }
 
@@ -147,7 +151,7 @@ def parse(String description) {
         sendEvent(name: "parseSwitch", value: mapDescription)
 
         if(mapDescription.sourceEndpoint == "01") {
-            attrName = "switch"
+            attrName = "switch1"
         }else if(mapDescription.sourceEndpoint == "02") {
             attrName = "switch2"
         }else{
@@ -202,13 +206,13 @@ def parse(String description) {
 		log.debug "parsing level control..value: ${mapDescription.value}"
         if(mapDescription.value == "00") {
             attrValue = "off"
-            sendEvent(name: "switch", value: attrValue)
+            sendEvent(name: "switch1", value: attrValue)
             sendEvent(name: "switch2", value: attrValue)
         }else if(mapDescription.value == "80") {
-            sendEvent(name: "switch", value: "off")
+            sendEvent(name: "switch1", value: "off")
             sendEvent(name: "switch2", value: "on")
         }else if(mapDescription.value == "ff") {
-            sendEvent(name: "switch", value: "on")
+            sendEvent(name: "switch1", value: "on")
             sendEvent(name: "switch2", value: "off")
         }else{
             return
@@ -226,26 +230,26 @@ def parse(String description) {
     return createEvent([:])
 }
 
-def off() {
-	log.info 'turn Off'
+def relay1_off() {
+	log.info "Turning Off Relay1"
 	zigbee.off()
 }
 
-def on() {
-	log.info 'turn On'
+def relay1_on() {
+	log.info "Turning On Relay1"
 	zigbee.on()
 }
 
-def onRelay2(){
-	log.debug "Turning On Relay2"
+def relay2_on(){
+	log.info "Turning On Relay2"
     //zigbee.command(OnOffCluster, OnCommand, additionalParams=[destEndpoint:Endpoint2])
     def cmds = []
     cmds << "st cmd 0x${device.deviceNetworkId} ${Endpoint2} ${OnOffCluster} ${OnCommand} {}"
 	cmds
 }
 
-def offRelay2(){
-	log.debug "Turning Off Relay2"
+def relay2_off(){
+	log.info "Turning Off Relay2"
 	//zigbee.command(OnOffCluster, OffCommand, additionalParams=[destEndpoint:Endpoint2])
     def cmds = []
     cmds << "st cmd 0x${device.deviceNetworkId} ${Endpoint2} ${OnOffCluster} ${OffCommand} {}"
